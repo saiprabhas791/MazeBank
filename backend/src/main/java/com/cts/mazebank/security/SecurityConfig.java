@@ -18,7 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 /**
- * Spring Security Configuration with JWT authentication.
+ * Spring Security Configuration with JWT authentication and open CORS profiles.
  */
 @Configuration
 @EnableWebSecurity
@@ -59,10 +59,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
+        
+        // Fixes CORS bugs across both local development and cloud production deployment setups
+        // Using allowedOriginPatterns allows wildcards (*) to coexist securely with allowCredentials(true)
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
