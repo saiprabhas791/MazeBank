@@ -14,10 +14,12 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
+    // Falls back to a default string if jwt.secret is missing
+    @Value("MazeBankSecretKeyForJWTTokenGeneration2024VeryLongSecretKey123456789")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    // Falls back to 86400000 (24 hours) if jwt.expiration is missing
+    @Value("86400000")
     private Long expiration;
 
     private SecretKey getSigningKey() {
