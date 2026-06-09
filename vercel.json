@@ -1,16 +1,12 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "frontend/dist/mazebank-frontend/browser",
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist/mazebank-frontend" }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    { "src": "^/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "^/favicon.ico$", "dest": "/favicon.ico" },
-    { "src": "^(?:.*)$", "dest": "/index.html" }
-  ],
-  "cleanUrls": true
+  ]
 }
+ 
+ 
