@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -22,6 +22,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findFilteredTransactions(
             @Param("transactionType") String transactionType,
             @Param("accountNumber") String accountNumber,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate);
 }

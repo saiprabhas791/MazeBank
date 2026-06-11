@@ -12,43 +12,57 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule],
   template: `
-    <mat-toolbar color="primary" class="navbar" *ngIf="auth.isLoggedIn()">
-      <mat-icon class="logo-icon" [routerLink]="auth.getRole() === 'ADMIN' ? '/admin-dashboard' : '/dashboard'" style="cursor:pointer">account_balance</mat-icon>
-      <span class="brand" [routerLink]="auth.getRole() === 'ADMIN' ? '/admin-dashboard' : '/dashboard'" style="cursor:pointer">MazeBank</span>
+    <mat-toolbar color="primary" class="navbar">
+      <mat-icon class="logo-icon" [routerLink]="auth.isLoggedIn() ? (auth.getRole() === 'ADMIN' ? '/admin' : '/dashboard') : '/'" style="cursor:pointer">account_balance</mat-icon>
+      <span class="brand" [routerLink]="auth.isLoggedIn() ? (auth.getRole() === 'ADMIN' ? '/admin' : '/dashboard') : '/'" style="cursor:pointer">MazeBank</span>
 
-      <span class="spacer"></span>
+       <span class="spacer"></span>
 
-      <!-- Customer Navigation -->
-      <ng-container *ngIf="auth.getRole() === 'CUSTOMER'">
-        <button mat-button routerLink="/dashboard" routerLinkActive="active-link">
-          <mat-icon>dashboard</mat-icon> Dashboard
-        </button>
-        <button mat-button routerLink="/accounts" routerLinkActive="active-link">
-          <mat-icon>account_balance_wallet</mat-icon> Accounts
-        </button>
-        <button mat-button routerLink="/transactions" routerLinkActive="active-link">
-          <mat-icon>receipt_long</mat-icon> Transactions
-        </button>
-        <button mat-button routerLink="/profile" routerLinkActive="active-link">
-          <mat-icon>person</mat-icon> Profile
-        </button>
-      </ng-container>
+       <!-- Always show Home -->
+       <button mat-button routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{exact: true}">
+         <mat-icon>home</mat-icon> Home
+       </button>
 
-      <!-- Admin Navigation -->
-      <ng-container *ngIf="auth.getRole() === 'ADMIN'">
-        
-      </ng-container>
+       <!-- Authenticated user navigation -->
+       <ng-container *ngIf="auth.isLoggedIn(); else guestLinks">
+         <ng-container *ngIf="auth.getRole() === 'CUSTOMER'">
+           <button mat-button routerLink="/dashboard" routerLinkActive="active-link">
+             <mat-icon>dashboard</mat-icon> Dashboard
+           </button>
+           <button mat-button routerLink="/accounts" routerLinkActive="active-link">
+             <mat-icon>account_balance_wallet</mat-icon> Accounts
+           </button>
+           <button mat-button routerLink="/transactions" routerLinkActive="active-link">
+             <mat-icon>receipt_long</mat-icon> Transactions
+           </button>
+           <button mat-button routerLink="/profile" routerLinkActive="active-link">
+             <mat-icon>person</mat-icon> Profile
+           </button>
+         </ng-container>
+         <ng-container *ngIf="auth.getRole() === 'ADMIN'">
+           <button mat-button routerLink="/admin" routerLinkActive="active-link">
+             <mat-icon>manage_accounts</mat-icon> Admin
+           </button>
+         </ng-container>
 
-      <!-- User menu -->
-      <button mat-icon-button [matMenuTriggerFor]="userMenu">
-        <mat-icon>account_circle</mat-icon>
-      </button>
-      <mat-menu #userMenu="matMenu">
-        <div class="menu-header">{{ auth.getFullName() }}</div>
-        <button mat-menu-item (click)="auth.logout()">
-          <mat-icon>logout</mat-icon> Logout
-        </button>
-      </mat-menu>
+         <!-- User menu -->
+         <button mat-icon-button [matMenuTriggerFor]="userMenu">
+           <mat-icon>account_circle</mat-icon>
+         </button>
+         <mat-menu #userMenu="matMenu">
+           <div class="menu-header">{{ auth.getFullName() }}</div>
+           <button mat-menu-item (click)="auth.logout()">
+             <mat-icon>logout</mat-icon> Logout
+           </button>
+         </mat-menu>
+       </ng-container>
+
+       <!-- Guest links -->
+       <ng-template #guestLinks>
+         <button mat-button routerLink="/login">Login</button>
+         <button mat-button routerLink="/register">Register</button>
+         <button mat-button routerLink="/admin-login">Admin</button>
+       </ng-template>
     </mat-toolbar>
   `,
   styles: [`
@@ -60,6 +74,7 @@ import { AuthService } from '../../services/auth.service';
     .logo-icon {
       margin-right: 8px;
     }
+
     .brand {
       font-size: 20px;
       font-weight: 500;

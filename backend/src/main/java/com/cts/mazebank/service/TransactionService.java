@@ -2,16 +2,23 @@ package com.cts.mazebank.service;
 
 import com.cts.mazebank.model.Account;
 import com.cts.mazebank.model.Transaction;
+import com.cts.mazebank.model.Customer;
 import com.cts.mazebank.repository.AccountRepository;
 import com.cts.mazebank.repository.TransactionRepository;
+import com.cts.mazebank.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 
 @Service
 public class TransactionService {
+
+    // Keep ZoneId import available for conversions if needed; transactions are stored as UTC Instants
 
     @Autowired
     private TransactionRepository transactionRepository;
@@ -19,11 +26,16 @@ public class TransactionService {
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
     @Transactional
     public Transaction deposit(Long accountId, Double amount) {
         if (amount <= 0) throw new RuntimeException("Deposit amount must be greater than zero");
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        // Verify account exists and belongs to authenticated customer
+        Customer authCustomer = getAuthenticatedCustomer();
+        Account account = accountRepository.findByIdAndCustomerId(accountId, authCustomer.getId())
+                .orElseThrow(() -> new AccessDeniedException("You are not authorized to deposit into this account"));
         if (!account.getActive()) throw new RuntimeException("Account is deactivated");
 
         account.setBalance(account.getBalance() + amount);
@@ -33,7 +45,7 @@ public class TransactionService {
         transaction.setTransactionType("DEPOSIT");
         transaction.setAmount(amount);
         transaction.setDescription("Deposit of ₹" + amount);
-        transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setTransactionDate(Instant.now());
         transaction.setAccount(account);
         return transactionRepository.save(transaction);
     }
@@ -41,8 +53,10 @@ public class TransactionService {
     @Transactional
     public Transaction withdraw(Long accountId, Double amount) {
         if (amount <= 0) throw new RuntimeException("Withdrawal amount must be greater than zero");
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        // Verify account exists and belongs to authenticated customer
+        Customer authCustomer = getAuthenticatedCustomer();
+        Account account = accountRepository.findByIdAndCustomerId(accountId, authCustomer.getId())
+                .orElseThrow(() -> new AccessDeniedException("You are not authorized to withdraw from this account"));
         if (!account.getActive()) throw new RuntimeException("Account is deactivated");
         if (account.getBalance() < amount)
             throw new RuntimeException("Insufficient balance. Available: ₹" + account.getBalance());
@@ -54,7 +68,7 @@ public class TransactionService {
         transaction.setTransactionType("WITHDRAWAL");
         transaction.setAmount(amount);
         transaction.setDescription("Withdrawal of ₹" + amount);
-        transaction.setTransactionDate(LocalDateTime.now());
+        transaction.setTransactionDate(Instant.now());
         transaction.setAccount(account);
         return transactionRepository.save(transaction);
     }
@@ -62,9 +76,10 @@ public class TransactionService {
     @Transactional
     public Transaction transfer(Long fromAccountId, String toAccountNumber, Double amount) {
         if (amount <= 0) throw new RuntimeException("Transfer amount must be greater than zero");
-
-        Account fromAccount = accountRepository.findById(fromAccountId)
-                .orElseThrow(() -> new RuntimeException("Source account not found"));
+        // Verify the source account belongs to authenticated customer
+        Customer authCustomer = getAuthenticatedCustomer();
+        Account fromAccount = accountRepository.findByIdAndCustomerId(fromAccountId, authCustomer.getId())
+                .orElseThrow(() -> new AccessDeniedException("You are not authorized to transfer from this account"));
         Account toAccount = accountRepository.findByAccountNumber(toAccountNumber)
                 .orElseThrow(() -> new RuntimeException("Destination account not found: " + toAccountNumber));
 
@@ -80,7 +95,7 @@ public class TransactionService {
         toAccount.setBalance(toAccount.getBalance() + amount);
         accountRepository.save(toAccount);
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         Transaction transaction = new Transaction();
         transaction.setTransactionType("TRANSFER");
@@ -103,7 +118,7 @@ public class TransactionService {
         return transaction;
     }
 
-    public List<Transaction> getFilteredTransactions(String transactionType, String accountNumber, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<Transaction> getFilteredTransactions(String transactionType, String accountNumber, Instant startDate, Instant endDate) {
         return transactionRepository.findFilteredTransactions(transactionType, accountNumber, startDate, endDate);
     }
 
@@ -117,5 +132,14 @@ public class TransactionService {
 
     public List<Transaction> getAllTransactions() {
         return transactionRepository.findAll();
+    }
+
+    // Resolve authenticated customer from security context
+    private Customer getAuthenticatedCustomer() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) throw new AccessDeniedException("Unauthenticated");
+        String email = auth.getName();
+        return customerRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
     }
 }

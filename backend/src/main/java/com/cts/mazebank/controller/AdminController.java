@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
+
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     @Autowired
     private CustomerService customerService;
@@ -56,8 +59,17 @@ public class AdminController {
             @RequestParam(required = false) String accountNumber,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-        LocalDateTime start = (startDate != null && !startDate.isEmpty()) ? LocalDate.parse(startDate).atStartOfDay() : null;
-        LocalDateTime end = (endDate != null && !endDate.isEmpty()) ? LocalDate.parse(endDate).atTime(23, 59, 59) : null;
+        Instant start = null;
+        Instant end = null;
+        if (startDate != null && !startDate.isEmpty()) {
+            LocalDate date = LocalDate.parse(startDate);
+            // Interpret provided date as start of day in server default timezone, then convert to Instant (UTC)
+            start = date.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            LocalDate date = LocalDate.parse(endDate);
+            end = date.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant();
+        }
         String type = (transactionType != null && !transactionType.isEmpty()) ? transactionType : null;
         String accNum = (accountNumber != null && !accountNumber.isEmpty()) ? accountNumber : null;
         return ResponseEntity.ok(transactionService.getFilteredTransactions(type, accNum, start, end));
@@ -73,3 +85,7 @@ public class AdminController {
         return ResponseEntity.ok(dashboard);
     }
 }
+
+
+
+

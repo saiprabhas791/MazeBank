@@ -31,14 +31,14 @@ import { AuthService } from '../../services/auth.service';
             <mat-icon matPrefix>email</mat-icon>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Password</mat-label>
-            <input matInput [(ngModel)]="password" [type]="hidePassword ? 'password' : 'text'">
-            <mat-icon matPrefix>lock</mat-icon>
-            <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword">
-              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
-            </button>
-          </mat-form-field>
+           <mat-form-field appearance="outline" class="full-width">
+             <mat-label>Password</mat-label>
+             <input matInput [(ngModel)]="password" [type]="hidePassword ? 'password' : 'text'" (keyup.enter)="login()">
+             <mat-icon matPrefix>lock</mat-icon>
+             <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword">
+               <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+             </button>
+           </mat-form-field>
 
           <button mat-raised-button color="primary" class="full-width login-btn" (click)="login()" [disabled]="loading">
             <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>

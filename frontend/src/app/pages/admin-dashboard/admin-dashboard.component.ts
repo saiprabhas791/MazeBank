@@ -154,10 +154,10 @@ import { AccountService } from '../../services/account.service';
                 <th mat-header-cell *matHeaderCellDef>Account Number</th>
                 <td mat-cell *matCellDef="let t">{{ t.account?.accountNumber }}</td>
               </ng-container>
-              <ng-container matColumnDef="transactionDate">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let t">{{ t.transactionDate | date:'medium' }}</td>
-              </ng-container>
+               <ng-container matColumnDef="transactionDate">
+                 <th mat-header-cell *matHeaderCellDef>Date & Time</th>
+                 <td mat-cell *matCellDef="let t">{{ t.transactionDate | date:'medium' }}</td>
+               </ng-container>
               <ng-container matColumnDef="description">
                 <th mat-header-cell *matHeaderCellDef>Description</th>
                 <td mat-cell *matCellDef="let t">{{ t.description }}</td>

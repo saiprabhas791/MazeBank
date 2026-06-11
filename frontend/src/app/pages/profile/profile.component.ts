@@ -66,8 +66,32 @@ export class ProfileComponent implements OnInit {
   constructor(private customerService: CustomerService, private auth: AuthService) {}
 
   ngOnInit() {
-    this.customerService.getCustomerById(this.auth.getCustomerId()).subscribe(data => {
-      this.customer = data;
+    // Resolve authoritative identity from server-side token, then load customer
+    this.auth.getCurrentUser().subscribe(user => {
+      const customerId = user?.customerId || user?.id;
+      if (customerId) {
+        this.customerService.getCustomerById(customerId).subscribe(data => {
+          this.customer = data;
+        }, err => {
+          this.errorMsg = err.error?.message || 'Unable to load profile';
+        });
+      } else {
+        // fallback: try using stored id (legacy)
+        const legacyId = this.auth.getCustomerId();
+        if (legacyId) {
+          this.customerService.getCustomerById(legacyId).subscribe(data => this.customer = data, err => this.errorMsg = 'Unable to load profile');
+        } else {
+          this.errorMsg = 'Unable to determine authenticated user. Please login again.';
+        }
+      }
+    }, err => {
+      // If /me fails, fallback to stored id
+      const legacyId = this.auth.getCustomerId();
+      if (legacyId) {
+        this.customerService.getCustomerById(legacyId).subscribe(data => this.customer = data, e => this.errorMsg = 'Unable to load profile');
+      } else {
+        this.errorMsg = 'Unable to determine authenticated user. Please login again.';
+      }
     });
   }
 

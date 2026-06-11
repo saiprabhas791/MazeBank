@@ -2,7 +2,8 @@ package com.cts.mazebank.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 @Table(name = "transaction")
@@ -21,8 +22,9 @@ public class Transaction {
     @Column(nullable = false)
     private Double amount;
 
-    @Column(name = "transaction_date")
-    private LocalDateTime transactionDate = LocalDateTime.now();
+    @Column(name = "transaction_date", columnDefinition = "TIMESTAMP")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    private Instant transactionDate;
 
     private String description;
 
@@ -35,3 +37,4 @@ public class Transaction {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 }
+

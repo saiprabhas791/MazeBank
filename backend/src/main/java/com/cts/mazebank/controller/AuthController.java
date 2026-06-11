@@ -9,6 +9,8 @@ import com.cts.mazebank.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -93,5 +95,41 @@ public class AuthController {
         response.put("fullName", admin.getFullName());
         response.put("role", "ADMIN");
         return ResponseEntity.ok(response);
+    }
+
+    // Get current authenticated user (customer or admin)
+    @GetMapping("/me")
+    public ResponseEntity<?> me() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthenticated"));
+        }
+
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            // Return admin identity details
+            String username = auth.getName();
+            return adminRepository.findByUsername(username)
+                    .map(a -> Map.<String,Object>of(
+                            "adminId", a.getId(),
+                            "fullName", a.getFullName(),
+                            "role", "ADMIN",
+                            "username", a.getUsername()
+                    ))
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message","Admin not found")));
+        }
+
+        // Otherwise return customer identity
+        String email = auth.getName();
+        return customerRepository.findByEmail(email)
+                .map(c -> Map.<String,Object>of(
+                        "customerId", c.getId(),
+                        "fullName", c.getFullName(),
+                        "email", c.getEmail(),
+                        "role", c.getRole()
+                ))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message","Customer not found")));
     }
 }

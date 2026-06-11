@@ -27,8 +27,8 @@ export class AuthService {
 
   // Save token and user data to localStorage
   saveUserData(data: any): void {
+    // keep only authentication token and public profile info in localStorage
     localStorage.setItem('token', data.token);
-    localStorage.setItem('customerId', data.customerId);
     localStorage.setItem('fullName', data.fullName);
     localStorage.setItem('email', data.email);
     localStorage.setItem('role', data.role);
@@ -37,7 +37,8 @@ export class AuthService {
   // Logout
   logout(): void {
     localStorage.clear();
-    this.router.navigate(['/login']);
+    // Redirect to homepage after logout (landing page)
+    this.router.navigate(['/']);
   }
 
   // Check if user is logged in
@@ -52,7 +53,13 @@ export class AuthService {
 
   // Get current customer ID
   getCustomerId(): string {
+    // Deprecated: prefer calling getCurrentUser() which reads id from server-side token
     return localStorage.getItem('customerId') || '';
+  }
+
+  // Fetch current authenticated user details from backend (/api/auth/me)
+  getCurrentUser(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/me`);
   }
 
   getFullName(): string {

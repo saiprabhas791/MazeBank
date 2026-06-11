@@ -103,13 +103,20 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const customerId = this.auth.getCustomerId();
-    this.accountService.getAccountsByCustomer(customerId).subscribe(accounts => {
-      this.accounts = accounts;
-      this.totalBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
-    });
-    this.transactionService.getByCustomer(customerId).subscribe(txns => {
-      this.recentTransactions = txns;
+    // Resolve customer id from server-side token (don't trust client-side stored id)
+    this.auth.getCurrentUser().subscribe(user => {
+      const customerId = user?.customerId || user?.id;
+      this.accountService.getAccountsByCustomer(customerId).subscribe(accounts => {
+        this.accounts = accounts;
+        this.totalBalance = accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
+      });
+      this.transactionService.getByCustomer(customerId).subscribe(txns => {
+        this.recentTransactions = txns;
+      });
+    }, err => {
+      // not authenticated or unable to fetch user; clear data
+      this.accounts = [];
+      this.recentTransactions = [];
     });
   }
 

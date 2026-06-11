@@ -48,11 +48,11 @@ import { AuthService } from '../../services/auth.service';
             <mat-icon matPrefix>home</mat-icon>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Password</mat-label>
-            <input matInput [(ngModel)]="customer.password" type="password">
-            <mat-icon matPrefix>lock</mat-icon>
-          </mat-form-field>
+           <mat-form-field appearance="outline" class="full-width">
+             <mat-label>Password</mat-label>
+             <input matInput [(ngModel)]="customer.password" type="password" (keyup.enter)="register()">
+             <mat-icon matPrefix>lock</mat-icon>
+           </mat-form-field>
 
           <button mat-raised-button color="primary" class="full-width" (click)="register()" [disabled]="loading">
             {{ loading ? 'Registering...' : 'Register' }}

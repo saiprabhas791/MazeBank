@@ -7,12 +7,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-admin-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="login-container">
       <mat-card class="login-card">
@@ -31,15 +32,16 @@ import { AuthService } from '../../services/auth.service';
             <mat-icon matPrefix>person</mat-icon>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Password</mat-label>
-            <input matInput [(ngModel)]="password" type="password">
-            <mat-icon matPrefix>lock</mat-icon>
-          </mat-form-field>
+           <mat-form-field appearance="outline" class="full-width">
+             <mat-label>Password</mat-label>
+             <input matInput [(ngModel)]="password" type="password" (keyup.enter)="login()">
+             <mat-icon matPrefix>lock</mat-icon>
+           </mat-form-field>
 
-          <button mat-raised-button color="warn" class="full-width" (click)="login()">
-            Admin Login
-          </button>
+           <button mat-raised-button color="warn" class="full-width" (click)="login()" [disabled]="loading">
+             <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+             <span *ngIf="!loading">Admin Login</span>
+           </button>
 
           <div class="links">
             <a routerLink="/login">Customer Login</a>
@@ -82,18 +84,22 @@ export class AdminLoginComponent {
   username = '';
   password = '';
   errorMessage = '';
+  loading = false;
 
   constructor(private authService: AuthService, private router: Router) {}
 
   login() {
     this.errorMessage = '';
+    this.loading = true;
     this.authService.adminLogin({ username: this.username, password: this.password }).subscribe({
       next: (res) => {
         this.authService.saveUserData(res);
         this.router.navigate(['/admin']);
+        this.loading = false;
       },
       error: (err) => {
         this.errorMessage = err.error?.message || 'Login failed';
+        this.loading = false;
       }
     });
   }

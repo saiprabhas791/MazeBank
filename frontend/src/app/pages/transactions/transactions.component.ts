@@ -39,8 +39,10 @@ import { AuthService } from '../../services/auth.service';
                   <span matTextPrefix>₹&nbsp;</span>
                   <input matInput type="number" placeholder="0.00" [(ngModel)]="depositAmount">
                 </mat-form-field>
-                <button mat-raised-button color="primary" (click)="deposit()">
-                  <mat-icon>arrow_downward</mat-icon> Deposit
+                <button mat-raised-button color="primary" (click)="deposit()" [disabled]="isProcessingDeposit">
+                  <mat-icon>arrow_downward</mat-icon>
+                  <ng-container *ngIf="!isProcessingDeposit">Deposit</ng-container>
+                  <ng-container *ngIf="isProcessingDeposit">Processing…</ng-container>
                 </button>
               </div>
             </mat-card-content>
@@ -60,8 +62,10 @@ import { AuthService } from '../../services/auth.service';
                   <span matTextPrefix>₹&nbsp;</span>
                   <input matInput type="number" placeholder="0.00" [(ngModel)]="withdrawAmount">
                 </mat-form-field>
-                <button mat-raised-button color="warn" (click)="withdraw()">
-                  <mat-icon>arrow_upward</mat-icon> Withdraw
+                <button mat-raised-button color="warn" (click)="withdraw()" [disabled]="isProcessingWithdraw">
+                  <mat-icon>arrow_upward</mat-icon>
+                  <ng-container *ngIf="!isProcessingWithdraw">Withdraw</ng-container>
+                  <ng-container *ngIf="isProcessingWithdraw">Processing…</ng-container>
                 </button>
               </div>
             </mat-card-content>
@@ -85,8 +89,10 @@ import { AuthService } from '../../services/auth.service';
                   <span matTextPrefix>₹&nbsp;</span>
                   <input matInput type="number" placeholder="0.00" [(ngModel)]="transferAmount">
                 </mat-form-field>
-                <button mat-raised-button color="accent" (click)="transfer()">
-                  <mat-icon>swap_horiz</mat-icon> Transfer
+                <button mat-raised-button color="accent" (click)="transfer()" [disabled]="isProcessingTransfer">
+                  <mat-icon>swap_horiz</mat-icon>
+                  <ng-container *ngIf="!isProcessingTransfer">Transfer</ng-container>
+                  <ng-container *ngIf="isProcessingTransfer">Processing…</ng-container>
                 </button>
               </div>
             </mat-card-content>
@@ -126,9 +132,9 @@ import { AuthService } from '../../services/auth.service';
               </div>
               <table mat-table [dataSource]="filteredTransactions" class="full-width" *ngIf="filteredTransactions.length > 0">
                 <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>Date</th>
-                  <td mat-cell *matCellDef="let t">{{ t.transactionDate | date:'short' }}</td>
-                </ng-container>
+                   <th mat-header-cell *matHeaderCellDef>Date & Time</th>
+                   <td mat-cell *matCellDef="let t">{{ t.transactionDate | date:'medium' }}</td>
+                 </ng-container>
                 <ng-container matColumnDef="type">
                   <th mat-header-cell *matHeaderCellDef>Type</th>
                   <td mat-cell *matCellDef="let t">{{ t.transactionType }}</td>
@@ -175,6 +181,10 @@ export class TransactionsComponent implements OnInit {
 
   depositAmount: number | null = null;
   withdrawAmount: number | null = null;
+  // prevent duplicate submissions
+  isProcessingDeposit = false;
+  isProcessingWithdraw = false;
+  isProcessingTransfer = false;
 
   transferToNumber = '';
   transferAmount: number | null = null;
@@ -186,8 +196,16 @@ export class TransactionsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadAccounts();
-    this.loadTransactions();
+    // Resolve current authenticated user from server (don't rely on client-stored id)
+    this.auth.getCurrentUser().subscribe(user => {
+      const customerId = user?.customerId || user?.id;
+      this.loadAccountsForCustomer(customerId);
+      this.loadTransactionsForCustomer(customerId);
+    }, err => {
+      // fallback: try to load with any stored id (best-effort)
+      this.loadAccounts();
+      this.loadTransactions();
+    });
   }
 
   loadAccounts() {
@@ -201,6 +219,23 @@ export class TransactionsComponent implements OnInit {
 
   loadTransactions() {
     this.transactionService.getByCustomer(this.auth.getCustomerId()).subscribe(data => {
+      this.transactions = data;
+      this.applyFilters();
+    });
+  }
+
+  // New helpers that accept server-resolved customer id
+  loadAccountsForCustomer(customerId: any) {
+    this.accountService.getAccountsByCustomer(customerId).subscribe(data => {
+      this.accounts = data;
+      if (data.length > 0) {
+        this.account = data[0];
+      }
+    });
+  }
+
+  loadTransactionsForCustomer(customerId: any) {
+    this.transactionService.getByCustomer(customerId).subscribe(data => {
       this.transactions = data;
       this.applyFilters();
     });
@@ -232,18 +267,22 @@ export class TransactionsComponent implements OnInit {
   deposit() {
     if (!this.account) { alert('No account found'); return; }
     if (!this.depositAmount || this.depositAmount <= 0) { alert('Please enter a valid amount greater than 0'); return; }
+    if (this.isProcessingDeposit) { return; }
+    this.isProcessingDeposit = true;
     this.transactionService.deposit(this.account.id, this.depositAmount).subscribe({
-      next: () => { alert('Deposit successful!'); window.location.reload(); },
-      error: (err: any) => { alert(err.error?.message || 'Deposit failed'); window.location.reload(); }
+      next: () => { this.isProcessingDeposit = false; alert('Deposit successful!'); window.location.reload(); },
+      error: (err: any) => { this.isProcessingDeposit = false; alert(err.error?.message || 'Deposit failed'); window.location.reload(); }
     });
   }
 
   withdraw() {
     if (!this.account) { alert('No account found'); return; }
     if (!this.withdrawAmount || this.withdrawAmount <= 0) { alert('Please enter a valid amount greater than 0'); return; }
+    if (this.isProcessingWithdraw) { return; }
+    this.isProcessingWithdraw = true;
     this.transactionService.withdraw(this.account.id, this.withdrawAmount).subscribe({
-      next: () => { alert('Withdrawal successful!'); window.location.reload(); },
-      error: (err: any) => { alert(err.error?.message || 'Withdrawal failed'); window.location.reload(); }
+      next: () => { this.isProcessingWithdraw = false; alert('Withdrawal successful!'); window.location.reload(); },
+      error: (err: any) => { this.isProcessingWithdraw = false; alert(err.error?.message || 'Withdrawal failed'); window.location.reload(); }
     });
   }
 
@@ -260,9 +299,11 @@ export class TransactionsComponent implements OnInit {
       return;
     }
 
+    if (this.isProcessingTransfer) { return; }
+    this.isProcessingTransfer = true;
     this.transactionService.transfer(this.account.id, this.transferToNumber, this.transferAmount!).subscribe({
-      next: () => { alert('Transfer successful!'); window.location.reload(); },
-      error: (err: any) => { alert(err.error?.message || 'Transfer failed'); window.location.reload(); }
+      next: () => { this.isProcessingTransfer = false; alert('Transfer successful!'); window.location.reload(); },
+      error: (err: any) => { this.isProcessingTransfer = false; alert(err.error?.message || 'Transfer failed'); window.location.reload(); }
     });
   }
 }

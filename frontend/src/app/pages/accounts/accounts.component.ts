@@ -97,7 +97,16 @@ export class AccountsComponent implements OnInit {
   constructor(private accountService: AccountService, private auth: AuthService) {}
 
   ngOnInit() {
-    this.loadAccounts();
+    // Resolve customer id from server to avoid relying on client-side stored id
+    this.auth.getCurrentUser().subscribe(user => {
+      const customerId = user?.customerId || user?.id;
+      this.accountService.getAccountsByCustomer(customerId).subscribe(data => {
+        this.accounts = data;
+      });
+    }, err => {
+      // fallback to stored id if server call fails
+      this.loadAccounts();
+    });
   }
 
   loadAccounts() {
@@ -127,19 +136,31 @@ export class AccountsComponent implements OnInit {
       return;
     }
 
-    this.accountService.createAccount(this.auth.getCustomerId(), {
+    // resolve customer id from server at creation time
+    this.auth.getCurrentUser().subscribe(user => {
+      const customerId = user?.customerId || user?.id;
+      this.accountService.createAccount(customerId, {
       aadharNumber: this.aadharNumber,
       panNumber: this.panNumber.toUpperCase()
-    }).subscribe({
-      next: (acc: any) => {
-        alert('Savings Account created successfully!\nAccount Number: ' + acc.accountNumber);
-        this.aadharNumber = '';
-        this.panNumber = '';
-        this.loadAccounts();
-      },
-      error: (err: any) => {
-        alert(err.error?.message || 'Failed to create account');
-      }
+      }).subscribe({
+        next: (acc: any) => {
+          alert('Savings Account created successfully!\nAccount Number: ' + acc.accountNumber);
+          this.aadharNumber = '';
+          this.panNumber = '';
+          this.loadAccounts();
+        },
+        error: (err: any) => {
+          let serverMsg = err?.error?.message || 'Failed to create account';
+          const lower = (serverMsg || '').toLowerCase();
+          // If server returned a raw SQL or very long message, sanitize it on the client as a safety net
+          if (lower.includes('sql') || lower.includes('duplicate entry') || lower.includes('constraint') || serverMsg.length > 300) {
+            serverMsg = 'Request failed due to duplicate or invalid data. Please check PAN/Aadhar and try again.';
+          }
+          alert(serverMsg);
+        }
+      });
+    }, err => {
+      alert('Unable to determine authenticated user. Please login again.');
     });
   }
 
